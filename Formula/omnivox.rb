@@ -17,9 +17,6 @@ class Omnivox < Formula
     end
   end
 
-  # Preserve the verified upstream executables and their adjacent runtime data.
-  skip_clean :all
-
   def install
     libexec.install Dir["*"]
     bin.write_exec_script libexec/"omnivox"
