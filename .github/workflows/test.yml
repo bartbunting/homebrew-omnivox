@@ -1,0 +1,70 @@
+name: Homebrew
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Homebrew (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_CLEANUP: "1"
+      HOMEBREW_NO_ANALYTICS: "1"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: Homebrew/actions/setup-homebrew@848c272c7bfe984a197bd4d16383f4c106ec61e6
+        with:
+          stable: true
+      - name: Test release updater
+        run: python3 -m unittest discover -s tests -v
+      - name: Verify published archives against formula
+        run: |
+          version=$(ruby -ne 'puts $1 if /^  version "([^"]+)"/ =~ $_' Formula/omnivox.rb)
+          python3 tools/update_formula.py "$version" --check
+      - name: Check formula style
+        run: brew style Formula/omnivox.rb
+      - name: Install and audit
+        run: |
+          brew install --build-from-source bartbunting/omnivox/omnivox
+          brew audit --formula bartbunting/omnivox/omnivox
+      - name: Test installed synthesis
+        run: brew test bartbunting/omnivox/omnivox
+      - name: Reinstall and test
+        run: |
+          brew reinstall --build-from-source bartbunting/omnivox/omnivox
+          brew test bartbunting/omnivox/omnivox
+      - name: Exercise upgrade with a temporary packaging revision
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path("Formula/omnivox.rb")
+          text = path.read_text()
+          match = re.search(r'^  revision (\d+)$', text, re.M)
+          if match:
+              text = text[:match.start()] + f"  revision {int(match[1]) + 1}" + text[match.end():]
+          else:
+              text = re.sub(r'(^  version "[^"]+"$)', r'\1\n  revision 1', text, count=1, flags=re.M)
+          path.write_text(text)
+          PY
+          brew upgrade --build-from-source bartbunting/omnivox/omnivox
+          brew test bartbunting/omnivox/omnivox
+      - name: Uninstall
+        run: |
+          brew uninstall bartbunting/omnivox/omnivox
+          test ! -e "$(brew --prefix)/bin/omnivox"
