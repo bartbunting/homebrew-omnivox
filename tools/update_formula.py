@@ -62,15 +62,32 @@ def release_hashes(version):
         return hashes
 
 
+def url_pattern(arch):
+    base = re.escape(f"https://github.com/{REPOSITORY}/releases/download/v")
+    return rf'{base}(\d+\.\d+\.\d+)/omnivox-(\d+\.\d+\.\d+)-macos-{arch}\.tar\.gz'
+
+
+def formula_version(original):
+    versions = []
+    for arch in ARCHITECTURES:
+        matches = re.findall(url_pattern(arch), original)
+        if len(matches) != 1 or matches[0][0] != matches[0][1]:
+            raise ValueError(f"Expected one consistent {arch} release URL")
+        versions.append(matches[0][0])
+    if len(set(versions)) != 1:
+        raise ValueError("Mac release URLs have different versions")
+    return versions[0]
+
+
 def render_formula(original, version, hashes):
-    versions = re.findall(r'^  version "([^"]+)"$', original, re.M)
-    if len(versions) != 1:
-        raise ValueError("Expected exactly one formula version")
-    current = version_number(versions[0])
+    current = formula_version(original)
     if tuple(map(int, version.split("."))) < tuple(map(int, current.split("."))):
         raise ValueError(f"Refusing downgrade from {current} to {version}")
-    updated = re.sub(r'^  version "[^"]+"$', f'  version "{version}"', original, flags=re.M)
+    updated = original
     for arch in ARCHITECTURES:
+        url = (f"https://github.com/{REPOSITORY}/releases/download/v{version}/"
+               f"omnivox-{version}-macos-{arch}.tar.gz")
+        updated = re.sub(url_pattern(arch), url, updated)
         pattern = rf'(url "[^"\n]+-macos-{arch}\.tar\.gz"\n\s+sha256 ")([0-9a-f]{{64}})(")'
         matches = list(re.finditer(pattern, updated))
         if len(matches) != 1:
@@ -99,11 +116,14 @@ def update_formula(path, version, check=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("version", help="Published stable version, with or without v")
+    parser.add_argument("version", nargs="?", help="Published stable version, with or without v")
     parser.add_argument("--check", action="store_true", help="Verify without editing")
     arguments = parser.parse_args()
     try:
-        update_formula(FORMULA, version_number(arguments.version), arguments.check)
+        if arguments.version is None and not arguments.check:
+            raise ValueError("Specify a published version to update, or use --check")
+        version = version_number(arguments.version) if arguments.version else formula_version(FORMULA.read_text())
+        update_formula(FORMULA, version, arguments.check)
     except (ValueError, OSError, subprocess.SubprocessError) as error:
         parser.exit(1, f"error: {error}\n")
 

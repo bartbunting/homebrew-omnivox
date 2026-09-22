@@ -79,7 +79,7 @@ The updater requires Python 3.9 or newer and an authenticated
 [GitHub CLI](https://cli.github.com). Replace `VERSION` with the published
 version, for example `1.12.0`. It rejects drafts, prereleases, and downgrades,
 downloads both Mac archives and their checksum manifest, verifies both archive
-hashes, and only then updates the version and hashes in the formula. It does
+hashes, and only then updates both release URLs and hashes in the formula. It does
 not create an Omnivox release, tag, commit, or push. Replacing a published
 archive under the same version is rejected.
 
@@ -95,13 +95,13 @@ are welcome; repository ownership is not required.
 
 ```sh
 python3 -m unittest discover -s tests -v
-python3 tools/update_formula.py 1.12.0 --check
+python3 tools/update_formula.py --check
 brew audit --formula bartbunting/omnivox/omnivox
 brew test bartbunting/omnivox/omnivox
 ```
 
-Use the formula's current version for `--check`; it verifies the published
-downloads against the formula without editing it. CI runs on native Apple
+The `--check` command uses the formula's current version and verifies the
+published downloads without editing it. CI runs on native Apple
 Silicon and Intel Macs. It checks formula style and audit, installation,
 version and voice discovery, WAV synthesis through eSpeak and Apple speech,
 reinstallation, a packaging-revision upgrade using the same upstream payload,

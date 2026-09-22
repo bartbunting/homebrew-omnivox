@@ -1,18 +1,17 @@
 class Omnivox < Formula
   desc "Cross-platform Emacsvox and Emacspeak speech server"
   homepage "https://github.com/bartbunting/omnivox"
-  version "1.12.0"
   license all_of: ["GPL-3.0-or-later", "GPL-2.0-or-later"]
 
   depends_on :macos
 
   on_macos do
     on_arm do
-      url "https://github.com/bartbunting/omnivox/releases/download/v#{version}/omnivox-#{version}-macos-arm64.tar.gz"
+      url "https://github.com/bartbunting/omnivox/releases/download/v1.12.0/omnivox-1.12.0-macos-arm64.tar.gz"
       sha256 "0f304c28d3740dd5a2309a61ad4f39df98585008040f1611546cce2addceaa60"
     end
     on_intel do
-      url "https://github.com/bartbunting/omnivox/releases/download/v#{version}/omnivox-#{version}-macos-x64.tar.gz"
+      url "https://github.com/bartbunting/omnivox/releases/download/v1.12.0/omnivox-1.12.0-macos-x64.tar.gz"
       sha256 "e3ca6c801e6de99f957ae31da59eaa1d235b85691a594578d525ef9a6be5c1dc"
     end
   end

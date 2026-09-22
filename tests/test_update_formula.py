@@ -15,7 +15,7 @@ import update_formula as updater
 class UpdateTests(unittest.TestCase):
     def setUp(self):
         self.original = updater.FORMULA.read_text()
-        self.current = updater.re.findall(r'^  version "([^"]+)"$', self.original, updater.re.M)[0]
+        self.current = updater.formula_version(self.original)
         major, minor, patch_number = map(int, self.current.split("."))
         self.next_version = f"{major}.{minor}.{patch_number + 1}"
         self.payloads = {"arm64": b"arm archive", "x64": b"intel archive"}
@@ -46,7 +46,8 @@ class UpdateTests(unittest.TestCase):
         with patch.object(updater, "gh", side_effect=self.fake_gh):
             hashes = updater.release_hashes(self.next_version)
         result = updater.render_formula(self.original, self.next_version, hashes)
-        self.assertIn(f'version "{self.next_version}"', result)
+        self.assertEqual(updater.formula_version(result), self.next_version)
+        self.assertEqual(result.count(f"/v{self.next_version}/omnivox-{self.next_version}-macos-"), 2)
         for digest in hashes.values():
             self.assertIn(digest, result)
         self.assertEqual(self.original.split("  def install", 1)[1], result.split("  def install", 1)[1])
@@ -76,9 +77,14 @@ class UpdateTests(unittest.TestCase):
                 updater.render_formula(self.original, version, self.hashes)
 
     def test_upstream_upgrade_resets_packaging_revision(self):
-        revised = self.original.replace(f'  version "{self.current}"', f'  version "{self.current}"\n  revision 3')
+        revised = self.original.replace("  depends_on :macos", "  revision 3\n\n  depends_on :macos")
         result = updater.render_formula(revised, self.next_version, self.hashes)
         self.assertNotIn("  revision ", result)
+
+    def test_rejects_inconsistent_url_versions(self):
+        changed = self.original.replace(f"omnivox-{self.current}-macos-x64", "omnivox-0.0.1-macos-x64")
+        with self.assertRaises(ValueError):
+            updater.render_formula(changed, self.next_version, self.hashes)
 
     def test_stable_version_validation(self):
         self.assertEqual(updater.version_number("v1.12.0"), "1.12.0")
