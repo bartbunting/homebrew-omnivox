@@ -7,12 +7,12 @@ class Omnivox < Formula
 
   on_macos do
     on_arm do
-      url "https://github.com/bartbunting/omnivox/releases/download/v1.12.1/omnivox-1.12.1-macos-arm64.tar.gz"
-      sha256 "2610b026c9c0a3b0658e361ac184dc8fcf7ecadd46062cba32b7c757576e62b7"
+      url "https://github.com/bartbunting/omnivox/releases/download/v1.13.0/omnivox-1.13.0-macos-arm64.tar.gz"
+      sha256 "f0b5cfab8ce25b0a15d60676a82d42b6d385f186f6ff2fbc46220e8e315dc834"
     end
     on_intel do
-      url "https://github.com/bartbunting/omnivox/releases/download/v1.12.1/omnivox-1.12.1-macos-x64.tar.gz"
-      sha256 "a39638cabf1f092dafc74889ddf44a8d663cf3f2d2354db545093c8ffcb329cd"
+      url "https://github.com/bartbunting/omnivox/releases/download/v1.13.0/omnivox-1.13.0-macos-x64.tar.gz"
+      sha256 "e4b871255008a0e63ff6583621b31d08a12fe17206f50de3c84c630226ec4be8"
     end
   end
 
