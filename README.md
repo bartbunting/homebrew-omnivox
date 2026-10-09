@@ -27,8 +27,9 @@ brew uninstall omnivox
 ```
 
 The formula installs the main server, its matching eSpeak NG data, the upstream
-Emacspeak adapter, the RHVoice integration helper, and the release's notices.
-Apple system speech and eSpeak are available without optional companions.
+Emacspeak adapter, the RHVoice integration helper, TGSpeechBox with its voice
+profiles and language data, and the release's notices. Apple system speech,
+eSpeak and TGSpeechBox are available without installing separate companions.
 RHVoice still needs a separately installed compatible runtime and voice data;
 including its helper does not establish macOS runtime support. Piper, Flite,
 RuTTS, and user voice models are not installed by this formula.
@@ -103,7 +104,7 @@ brew test bartbunting/omnivox/omnivox
 The `--check` command uses the formula's current version and verifies the
 published downloads without editing it. CI runs on native Apple
 Silicon and Intel Macs. It checks formula style and audit, installation,
-version and voice discovery, WAV synthesis through eSpeak and Apple speech,
+version and voice discovery, WAV synthesis through eSpeak, Apple speech and TGSpeechBox,
 reinstallation, a packaging-revision upgrade using the same upstream payload,
 and uninstallation. A real upgrade between different Omnivox versions and
 audible speech inside Emacs remain separate acceptance checks.
