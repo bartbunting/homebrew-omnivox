@@ -33,36 +33,56 @@ jobs:
       - name: Test release updater
         run: python3 -m unittest discover -s tests -v
       - name: Verify published archives against formula
-        run: python3 tools/update_formula.py --check
+        run: |
+          python3 tools/update_formula.py --check
+          python3 tools/update_formula.py --prerelease --check
       - name: Check formula style
-        run: brew style Formula/omnivox.rb
+        run: brew style Formula/omnivox.rb Formula/omnivox-pre.rb
       - name: Install and audit
         run: |
           brew install --build-from-source bartbunting/omnivox/omnivox
           brew audit --formula bartbunting/omnivox/omnivox
+          stable_binary="$(command -v omnivox)"
+          stable_version="$(omnivox --version)"
+          brew install --build-from-source bartbunting/omnivox/omnivox-pre
+          brew audit --formula bartbunting/omnivox/omnivox-pre
+          test "$(command -v omnivox)" = "$stable_binary"
+          test "$(omnivox --version)" = "$stable_version"
+          "$(brew --prefix omnivox-pre)/bin/omnivox" --version
       - name: Test installed synthesis
-        run: brew test bartbunting/omnivox/omnivox
+        run: |
+          brew test bartbunting/omnivox/omnivox
+          brew test bartbunting/omnivox/omnivox-pre
       - name: Reinstall and test
         run: |
-          brew reinstall --build-from-source bartbunting/omnivox/omnivox
-          brew test bartbunting/omnivox/omnivox
+          for formula in omnivox omnivox-pre; do
+            brew reinstall --build-from-source "bartbunting/omnivox/$formula"
+            brew test "bartbunting/omnivox/$formula"
+          done
       - name: Exercise upgrade with a temporary packaging revision
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
-          path = Path("Formula/omnivox.rb")
-          text = path.read_text()
-          match = re.search(r'^  revision (\d+)$', text, re.M)
-          if match:
-              text = text[:match.start()] + f"  revision {int(match[1]) + 1}" + text[match.end():]
-          else:
-              text = re.sub(r'(^  license .+$)', r'\1\n  revision 1', text, count=1, flags=re.M)
-          path.write_text(text)
+          for path in (Path("Formula/omnivox.rb"), Path("Formula/omnivox-pre.rb")):
+              text = path.read_text()
+              match = re.search(r'^  revision (\d+)$', text, re.M)
+              if match:
+                  text = text[:match.start()] + f"  revision {int(match[1]) + 1}" + text[match.end():]
+              else:
+                  text = re.sub(r'(^  license .+$)', r'\1\n  revision 1', text, count=1, flags=re.M)
+              path.write_text(text)
           PY
-          brew upgrade --build-from-source bartbunting/omnivox/omnivox
-          brew test bartbunting/omnivox/omnivox
+          for formula in omnivox omnivox-pre; do
+            brew upgrade --build-from-source "bartbunting/omnivox/$formula"
+            brew test "bartbunting/omnivox/$formula"
+          done
       - name: Uninstall
         run: |
+          prerelease_prefix="$(brew --prefix omnivox-pre)"
+          stable_version="$(omnivox --version)"
+          brew uninstall bartbunting/omnivox/omnivox-pre
+          test ! -e "$prerelease_prefix/bin/omnivox"
+          test "$(omnivox --version)" = "$stable_version"
           brew uninstall bartbunting/omnivox/omnivox
           test ! -e "$(brew --prefix)/bin/omnivox"
