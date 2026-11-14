@@ -96,7 +96,8 @@ def render_formula(original, version, hashes, prerelease=False):
     current = formula_version(original)
     if ("-pre." in current) != prerelease:
         raise ValueError("Formula channel does not match requested release")
-    if prerelease and re.findall(r'^  version "([^"\n]+)"$', original, re.M) != [current]:
+    explicit = re.findall(r'^  version "([^"\n]+)"$', original, re.M)
+    if prerelease and explicit and explicit != [current]:
         raise ValueError("Explicit formula version does not match the archive URLs")
     if version_key(version) < version_key(current):
         raise ValueError(f"Refusing downgrade from {current} to {version}")
@@ -116,8 +117,8 @@ def render_formula(original, version, hashes, prerelease=False):
         updated = re.sub(r"^  revision \d+\n", "", updated, flags=re.M)
     if prerelease:
         updated, count = re.subn(r'^  version "[^"\n]+"$', f'  version "{version}"', updated, flags=re.M)
-        if count != 1:
-            raise ValueError("Expected one explicit prerelease formula version")
+        if count > 1:
+            raise ValueError("Expected at most one explicit prerelease formula version")
     return updated
 
 

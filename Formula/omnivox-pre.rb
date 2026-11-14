@@ -1,7 +1,6 @@
 class OmnivoxPre < Formula
   desc "Testing prerelease of the Emacsvox and Emacspeak speech server"
   homepage "https://github.com/bartbunting/omnivox"
-  version "1.19.0-pre.2"
   license all_of: ["GPL-3.0-or-later", "GPL-2.0-or-later"]
 
   livecheck do

@@ -128,6 +128,13 @@ class PrereleaseTests(unittest.TestCase):
                 self.assertEqual(path.read_text(), self.original)
                 setattr(self, failure, previous)
 
+    def test_url_inferred_prerelease_version_stays_implicit(self):
+        original = self.original.replace(f'  version "{self.current}"\n', '')
+        result = updater.render_formula(original, self.next_version, self.hashes, prerelease=True)
+        self.assertEqual(updater.formula_version(result), self.next_version)
+        self.assertNotIn('  version "', result)
+        self.assertEqual(original.split('  def install', 1)[1], result.split('  def install', 1)[1])
+
     def test_prerelease_numeric_order_and_immutable_hashes(self):
         result = updater.render_formula(self.original, '1.19.0-pre.10', self.hashes, prerelease=True)
         for version in ('1.19.0-pre.2', '1.19.0-pre.10'):
