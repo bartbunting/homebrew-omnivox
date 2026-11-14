@@ -34,12 +34,34 @@ RHVoice still needs a separately installed compatible runtime and voice data;
 including its helper does not establish macOS runtime support. Piper, Flite,
 RuTTS, and user voice models are not installed by this formula.
 
-The binaries are taken directly from an existing stable Omnivox release and
+The binaries are taken directly from a published Omnivox release and
 verified against SHA-256 hashes. Homebrew does not compile Rust or create
 additional binary releases for this tap. The upstream binaries are not signed
 with an Apple Developer ID or notarized; consult the upstream
 [deployment guide](https://github.com/bartbunting/omnivox/blob/main/.github/DEPLOYMENT.md)
 if macOS blocks execution.
+
+## Opt-in testing prerelease
+
+`omnivox-pre` is a separate keg-only formula. It can coexist with stable
+`omnivox` and does not replace the ordinary `omnivox` command:
+
+```sh
+brew install bartbunting/omnivox/omnivox-pre
+"$(brew --prefix omnivox-pre)/bin/omnivox" --version
+export OMNIVOX_PROGRAM="$(brew --prefix omnivox-pre)/bin/omnivox"
+```
+
+Use this explicit executable in your testing Emacs session; do not force-link
+the formula. For device selection, use the paired Emacsvox client and isolated
+profile from the release's
+[Mac testing guide](https://github.com/bartbunting/omnivox/blob/v1.19.0-pre.2/docs/guides/macos-audio-devices.md).
+Physical device switching and audible Mac acceptance remain tester checks.
+
+Upgrade with `brew update` then `brew upgrade omnivox-pre`, and restart the
+testing speech session. Remove it with `brew uninstall omnivox-pre`; stable
+remains installed. Optional companions and user configuration stay outside the
+Cellar as for the stable formula.
 
 ## Emacs integration
 
@@ -92,6 +114,22 @@ not automatically publish future versions or need cross-repository secrets.
 Parham contributed the original formula. Contributions through pull requests
 are welcome; repository ownership is not required.
 
+### Maintaining the prerelease formula
+
+Use the explicit prerelease path after the numbered GitHub prerelease is public:
+
+```sh
+python3 tools/update_formula.py 1.19.0-pre.2 --prerelease
+python3 tools/update_formula.py 1.19.0-pre.2 --prerelease --check
+```
+
+This updates only `Formula/omnivox-pre.rb`. It requires a published `-pre.N`
+release and verifies both archive hashes. Drafts, stable releases, downgrades and
+changed same-version archives are rejected. Stable updates continue to reject
+prereleases. Require both native Mac checks on the final PR commit, merge, then
+rerun the explicit version check on merged `main`. Record the PR, commit and
+checks in the upstream release report.
+
 ## Checks
 
 ```sh
@@ -106,7 +144,8 @@ published downloads without editing it. CI runs on native Apple
 Silicon and Intel Macs. It checks formula style and audit, installation,
 version and voice discovery, WAV synthesis through eSpeak, Apple speech and TGSpeechBox,
 reinstallation, a packaging-revision upgrade using the same upstream payload,
-and uninstallation. A real upgrade between different Omnivox versions and
+and uninstallation for both formulas. It also checks that installing and removing
+the keg-only prerelease preserves the stable command. A real upgrade between different Omnivox versions and
 audible speech inside Emacs remain separate acceptance checks.
 
 The formula's license declaration describes the installed upstream payload.

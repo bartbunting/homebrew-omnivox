@@ -93,5 +93,65 @@ class UpdateTests(unittest.TestCase):
                 updater.version_number(value)
 
 
+class PrereleaseTests(unittest.TestCase):
+    fake_gh = UpdateTests.fake_gh
+
+    def setUp(self):
+        UpdateTests.setUp(self)
+        self.original = self.original.replace('class Omnivox <', 'class OmnivoxPre <')
+        self.original = self.original.replace(self.current, '1.19.0-pre.1')
+        self.original = self.original.replace('  depends_on :macos',
+            '  version "1.19.0-pre.1"\n\n  keg_only "testing release"\n\n  depends_on :macos')
+        self.current = '1.19.0-pre.1'
+        self.next_version = '1.19.0-pre.2'
+        self.prerelease = True
+
+    def test_verified_prerelease_update(self):
+        with patch.object(updater, 'gh', side_effect=self.fake_gh):
+            hashes = updater.release_hashes(self.next_version, prerelease=True)
+        result = updater.render_formula(self.original, self.next_version, hashes, prerelease=True)
+        self.assertEqual(updater.formula_version(result), self.next_version)
+        self.assertIn('version "1.19.0-pre.2"', result)
+        self.assertIn('keg_only', result)
+        self.assertEqual(self.original.split('  def install', 1)[1], result.split('  def install', 1)[1])
+
+    def test_prerelease_refusals_leave_formula_untouched(self):
+        for failure, value in (('draft', True), ('prerelease', False), ('corrupt', True),
+                               ('duplicate', True), ('missing', True)):
+            previous = getattr(self, failure)
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+                setattr(self, failure, value)
+                path = Path(temporary) / 'omnivox-pre.rb'
+                path.write_text(self.original)
+                with patch.object(updater, 'gh', side_effect=self.fake_gh), self.assertRaises(ValueError):
+                    updater.update_formula(path, self.next_version, prerelease=True)
+                self.assertEqual(path.read_text(), self.original)
+                setattr(self, failure, previous)
+
+    def test_prerelease_numeric_order_and_immutable_hashes(self):
+        result = updater.render_formula(self.original, '1.19.0-pre.10', self.hashes, prerelease=True)
+        for version in ('1.19.0-pre.2', '1.19.0-pre.10'):
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                updater.render_formula(result, version, {'arm64': '0'*64, 'x64': '0'*64}, prerelease=True)
+
+    def test_channel_mismatch_is_rejected(self):
+        for original, version, pre in ((self.original, '1.19.0', False),
+                                       (updater.FORMULA.read_text(), self.next_version, True)):
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                updater.render_formula(original, version, self.hashes, prerelease=pre)
+
+    def test_inconsistent_explicit_version_is_rejected(self):
+        original = self.original.replace('version "1.19.0-pre.1"', 'version "1.19.0-pre.9"')
+        with self.assertRaises(ValueError):
+            updater.render_formula(original, self.next_version, self.hashes, prerelease=True)
+
+    def test_prerelease_syntax(self):
+        self.assertEqual(updater.version_number('v1.19.0-pre.1', True), '1.19.0-pre.1')
+        for version in ('1.19.0', '1.19.0-pre.0', '1.19.0-pre.01', '1.19.0-rc.1',
+                        '1.19.0-pre.1\n', '01.19.0-pre.1'):
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                updater.version_number(version, True)
+
+
 if __name__ == "__main__":
     unittest.main()
